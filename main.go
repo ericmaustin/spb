@@ -19,24 +19,16 @@ type spBot struct {
 var (
 	log = logging.MustGetLogger("spBot")
 
-	format = logging.MustStringFormatter(
-		`%{color}%{time:Jan _2 15:04:05.000} %{level:.4s} ▶%{color:reset} %{message}`,
-	)
-
-	fileFormat = logging.MustStringFormatter(
-		`%{time:Jan _2 15:04:05.000} %{level:.4s} ▶ %{message}`,
-	)
-
 	Text = `**If you're in crises, please consider contacting the [National Suicide Prevention Lifeline](https://suicidepreventionlifeline.org/): 1-800-273-TALK**
 
-If you wish to help others in crises consider supporting:
-- [The National Suicide Prevention Lifeline](https://suicidepreventionlifeline.org/donate/)
-- [The National Alliance on Mental Illness](https://donate.nami.org/give/197406/#!/donation/checkout)
-- [The Jason Foundation](http://jasonfoundation.com/get-involved/)
+	If you wish to help others in crises consider supporting:
+	- [The National Suicide Prevention Lifeline](https://suicidepreventionlifeline.org/donate/)
+	- [The National Alliance on Mental Illness](https://donate.nami.org/give/197406/#!/donation/checkout)
+	- [The Jason Foundation](http://jasonfoundation.com/get-involved/)
 
-	
-I am a bot created by a survivor that is in no way affiliated with any of the organizations mentioned | [feedback](mailto:ericmaustin+spb@gmail.com)
-`
+		
+	I am a bot created by a survivor that is in no way affiliated with any of the organizations mentioned | [feedback](mailto:erics.awesome.bots@gmail.com)
+	`
 
 	matchExpressions = []string{
 		`i\s*(am\sgoing\sto|will)\skill\smyself`,
@@ -45,7 +37,7 @@ I am a bot created by a survivor that is in no way affiliated with any of the or
 		`contemplating\s+suicide`,
 	}
 
-	matchRe = make(map[string]*regexp.Regexp, 0)
+	matchRe = make(map[string]*regexp.Regexp, len(matchExpressions))
 
 	blacklist = []string{
 		// music subrreddits with potential false positives for lyrics
@@ -61,26 +53,27 @@ I am a bot created by a survivor that is in no way affiliated with any of the or
 		`quotes`,
 	}
 )
-// func (r *spBot) Post(p *reddit.Post) error {
-// 	log.Debugf("New post:%sby%s", p.Title, p.Author)
 
-// 	// if strings.Contains(p.SelfText, "post") {
-// 	// 	log.Debugf("Found post that matches:\n%v", p.SelfText)
-// 	// }
-// 	return nil
-// }
+// isBlackCommentBlackListed checks if comment has anything that reports it as blacklisted
+func (r *spBot) isBlackCommentBlackListed(post *reddit.Comment) bool {
+	for _, s := range blacklist {
+		if post.Subreddit == s || post.SubredditID == s {
+			log.Debugf("Ignoring matching comment in subreddit: '%s':\nbody: %s\nby: %s",
+				s, post.Body, post.Author)
+			return true
+		}
+	}
+
+	return false
+}
 
 func (r *spBot) Comment(post *reddit.Comment) error {
 
 	for reString, re := range matchRe {
 
 		if re.MatchString(post.Body) {
-			for _, s := range blacklist {
-				if post.Subreddit == s || post.SubredditID == s {
-					log.Debugf("Ignoring matching comment for expression '%s' in subreddit: '%s':\nbody: %s\nby: %s",
-						s, reString, post.Body, post.Author)
-					return nil
-				}
+			if r.isBlackCommentBlackListed(post) {
+				return nil
 			}
 
 			log.Debugf("Found matching comment for expression '%s':\nbody: %s\nby: %s",
@@ -95,7 +88,8 @@ func (r *spBot) Comment(post *reddit.Comment) error {
 func main() {
 
 	backend1 := logging.NewLogBackend(os.Stdout, "", 0)
-	backend1Formatter := logging.NewBackendFormatter(backend1, format)
+	backend1Formatter := logging.NewBackendFormatter(backend1,
+		logging.MustStringFormatter(`%{color}%{time:Jan _2 15:04:05.000} %{level:.4s} ▶%{color:reset} %{message}`))
 
 	fh, err := os.OpenFile("bot.log", os.O_CREATE | os.O_APPEND | os.O_RDWR, 0666)
 
@@ -105,7 +99,8 @@ func main() {
 	}
 
 	backendFile := logging.NewLogBackend(fh, "", 0)
-	backendFileFormatter := logging.NewBackendFormatter(backendFile, fileFormat)
+	backendFileFormatter := logging.NewBackendFormatter(backendFile,
+		logging.MustStringFormatter(`%{time:Jan _2 15:04:05.000} %{level:.4s} ▶ %{message}`))
 
 	logging.SetBackend(backend1Formatter, backendFileFormatter)
 
@@ -119,7 +114,7 @@ func main() {
 		}
 		matchRe[exp] = re
 	}
-
+	
 	if bot, err := reddit.NewBotFromAgentFile("bot.agent", 0); err != nil {
 		log.Errorf("Failed to create bot handle: %v", err)
 	} else {
