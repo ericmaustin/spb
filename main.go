@@ -54,7 +54,7 @@ If you wish to help others in crises consider supporting:
 		`quotes`,
 	}
 
-	itemExpires = time.Hour
+	itemExpires = time.Hour * 24
 )
 
 type commentTheadCacheItem struct {
