@@ -1,0 +1,2 @@
+Mar 30 12:26:11.231 INFO ▶[0m Started suicide prevention bot.
+[31mMar 30 13:26:01.871 ERRO ▶[0m Graw run failed with error Get https://oauth.reddit.com/r/ericbottesting/comments?before=t1_ejp0ypz&limit=100&raw_json=1: oauth2: token expired and refresh token is not set
