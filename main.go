@@ -1,11 +1,11 @@
 package main
 
 import (
-	"strings"
-	"time"
 	"fmt"
 	"os"
 	"regexp"
+	"strings"
+	"time"
 
 	logging "github.com/op/go-logging"
 	"github.com/turnage/graw"
@@ -53,22 +53,100 @@ If you wish to help others in crises consider supporting:
 		// quote subreddits
 		`quotes`,
 	}
+
+	itemExpires = time.Hour
 )
 
 type commentTheadCacheItem struct {
-	comment: *reddit.Comment
-	expires: time.Time
+	comment  *reddit.Comment
+	post	 *reddit.Post
+	expires  time.Time
 }
 
-type commentThreadCache struct {
-	topLevelComment
+
+// check if item in the cache has expired
+func (i *commentTheadCacheItem) expired() bool {
+	return i.expires.Before(time.Now())
 }
 
-var tltCacache = make([]string)
+// cache struct that contains links that have been cached
+type threadCache struct {
+	items map[string]*commentTheadCacheItem
+	stopCh chan bool
+}
+
+// adds an item into the cache
+func (tc *threadCache) addComment(comment *reddit.Comment, expiresIn time.Duration) {
+	tc.items[comment.LinkURL] = &commentTheadCacheItem{
+		comment: comment,
+		expires: time.Now().Add(expiresIn),
+	}
+}
+
+// adds an item into the cache with a post
+func (tc *threadCache) addPost(post *reddit.Post, expiresIn time.Duration) {
+	tc.items[post.URL] = &commentTheadCacheItem{
+		post: post,
+		expires: time.Now().Add(expiresIn),
+	}
+}
+
+// janitor removes items from the cache as they expire
+func (tc *threadCache) janitor() {
+	log.Debugf("Cache janitor started.")
+
+	for {
+		// poll every 100 milliseconds
+		timer := time.NewTicker(time.Millisecond * 100)
+
+		select {
+		case stop := <- tc.stopCh:
+			if stop == true {
+				log.Debugf("Janitor stop request recieved. Exiting.")
+				timer.Stop()
+				return
+			}
+		case <-timer.C:
+			// we got a tick, purge expired
+			for name, item := range tc.items {
+				if item.expired() {
+					log.Debugf("Item in cache has epxired with URL: %s", name)
+					delete(tc.items, name)
+				}
+			}
+		}
+	}
+}
+
+// stopJanitor stops the janitor
+func (tc *threadCache) stopJanitor() {
+	tc.stopCh <- true
+}
+
+// the actual cache instance
+var cache = &threadCache{
+	items: make(map[string]*commentTheadCacheItem, 0),
+	stopCh: make(chan bool),
+}
 
 // make sure this is the only reply in the thread
-func (r *spBot) checkThread(comment *reddit.Comment) bool {
+func (r *spBot) checkCommentExistsInCache(comment *reddit.Comment) bool {
 
+	if _, ok := cache.items[comment.LinkURL]; ok {
+		return true
+	}
+
+	return false
+}
+
+// make sure this is the only reply in the thread
+func (r *spBot) checkPostExistsInCache(post *reddit.Post) bool {
+
+	if _, ok := cache.items[post.URL]; ok {
+		return true
+	}
+
+	return false
 }
 
 // isCommentBlackListed checks if comment has anything that reports it as blacklisted
@@ -97,6 +175,7 @@ func (r *spBot) isPostBlackListed(post *reddit.Post) bool {
 	return false
 }
 
+// Listen to comments
 func (r *spBot) Comment(post *reddit.Comment) error {
 
 	for reString, re := range matchRe {
@@ -104,7 +183,17 @@ func (r *spBot) Comment(post *reddit.Comment) error {
 			if r.isCommentBlackListed(post) {
 				return nil
 			}
-			log.Debugf("Found matching post for expression '%s':\nsubreddit: %s\nBody: %s\nby: %s",
+
+			if !r.checkCommentExistsInCache(post) {
+				cache.addComment(post, itemExpires)
+				log.Infof("Added item to cache, LinkURL: %s", post.LinkURL)
+			} else {
+				log.Debugf("Found matching comment for expression but '%s' LinkURL %s was found in cache :\nsubreddit: %s\nBody: %s\nby: %s",
+					reString, post.LinkURL, post.Subreddit, post.Body, post.Author)
+				return nil
+			}
+
+			log.Infof("Found matching comment for expression '%s':\nsubreddit: %s\nBody: %s\nby: %s",
 				reString, post.Subreddit, post.Body, post.Author)
 			r.bot.Reply(post.Name, Text)
 			continue
@@ -114,6 +203,7 @@ func (r *spBot) Comment(post *reddit.Comment) error {
 	return nil
 }
 
+// listen to post
 func (r *spBot) Post(post *reddit.Post) error {
 
 	for reString, re := range matchRe {
@@ -123,7 +213,16 @@ func (r *spBot) Post(post *reddit.Post) error {
 				return nil
 			}
 
-			log.Debugf("Found matching post for expression '%s':\nsubreddit: %s\ntitle: %s\nSelf Text: %s\nby: %s",
+			if !r.checkPostExistsInCache(post) {
+				cache.addPost(post, itemExpires)
+				log.Infof("Added item to cache, LinkURL: %s", post.URL)
+			} else {
+				log.Debugf("Found matching post for expression '%s' but LinkURL %s was found in cache :\nsubreddit: %s\nby: %s",
+					reString, post.URL, post.Subreddit, post.Author)
+				return nil
+			}
+
+			log.Infof("Found matching post for expression '%s':\nsubreddit: %s\ntitle: %s\nSelf Text: %s\nby: %s",
 				reString, post.Subreddit, post.Title, post.SelfText, post.Author)
 			r.bot.Reply(post.Name, Text)
 			continue
@@ -135,11 +234,17 @@ func (r *spBot) Post(post *reddit.Post) error {
 
 func main() {
 
+	// stop the cache janitor when we exit
+	defer cache.stopJanitor()
+
+	// run the cache janitor in a go routine
+	go cache.janitor()
+
 	backend1 := logging.NewLogBackend(os.Stdout, "", 0)
 	backend1Formatter := logging.NewBackendFormatter(backend1,
 		logging.MustStringFormatter(`%{color}%{time:Jan _2 15:04:05.000} %{level:.4s} ▶%{color:reset} %{message}`))
 
-	fh, err := os.OpenFile("bot.log", os.O_CREATE | os.O_APPEND | os.O_RDWR, 0666)
+	fh, err := os.OpenFile("bot.log", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
 
 	if err != nil {
 		fmt.Printf("Error opening log file: %v", err)
@@ -162,11 +267,12 @@ func main() {
 		}
 		matchRe[exp] = re
 	}
-	
+
 	if bot, err := reddit.NewBotFromAgentFile("bot.agent", 0); err != nil {
 		log.Errorf("Failed to create bot handle: %v", err)
 	} else {
-		cfg := graw.Config{SubredditComments: []string{"all"}, Subreddits:[]string{"all"}}
+		cfg := graw.Config{SubredditComments: []string{"all"}, 
+		Subreddits: []string{"all"}}
 		handler := &spBot{bot: bot}
 		if _, wait, err := graw.Run(handler, bot, cfg); err != nil {
 			log.Errorf("Failed to start graw run: %v", err)
