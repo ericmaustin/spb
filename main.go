@@ -27,7 +27,7 @@ If you wish to help others in crises consider supporting:
 - [The Jason Foundation](http://jasonfoundation.com/get-involved/)
 
 	
-I am a bot created by a survivor that is in no way affiliated with any of the organizations mentioned | [feedback](mailto:erics.awesome.bots@gmail.com)
+^(I am a bot created by a survivor that is in no way affiliated with any of the organizations mentioned |) [^(feedback)](mailto:erics.awesome.bots@gmail.com)
 `
 
 	matchExpressions = []string{
@@ -149,7 +149,7 @@ func main() {
 	if bot, err := reddit.NewBotFromAgentFile("bot.agent", 0); err != nil {
 		log.Errorf("Failed to create bot handle: %v", err)
 	} else {
-		cfg := graw.Config{SubredditComments: []string{"all"}}
+		cfg := graw.Config{SubredditComments: []string{"all"}, Subreddits:[]string{"all"}}
 		handler := &spBot{bot: bot}
 		if _, wait, err := graw.Run(handler, bot, cfg); err != nil {
 			log.Errorf("Failed to start graw run: %v", err)
