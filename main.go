@@ -55,6 +55,22 @@ If you wish to help others in crises consider supporting:
 	}
 )
 
+type commentTheadCacheItem struct {
+	comment: *reddit.Comment
+	expires: time.Time
+}
+
+type commentThreadCache struct {
+	topLevelComment
+}
+
+var tltCacache = make([]string)
+
+// make sure this is the only reply in the thread
+func (r *spBot) checkThread(comment *reddit.Comment) bool {
+
+}
+
 // isCommentBlackListed checks if comment has anything that reports it as blacklisted
 func (r *spBot) isCommentBlackListed(post *reddit.Comment) bool {
 	for _, s := range blacklist {
