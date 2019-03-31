@@ -1,7 +1,7 @@
 package main
 
 import (
-	// "strings"
+	"strings"
 	// "time"
 	"fmt"
 	"os"
@@ -118,12 +118,24 @@ func main() {
 	if bot, err := reddit.NewBotFromAgentFile("bot.agent", 0); err != nil {
 		log.Errorf("Failed to create bot handle: %v", err)
 	} else {
-		cfg := graw.Config{SubredditComments: []string{"ericbottesting"}}
+		cfg := graw.Config{SubredditComments: []string{"all"}}
 		handler := &spBot{bot: bot}
 		if _, wait, err := graw.Run(handler, bot, cfg); err != nil {
 			log.Errorf("Failed to start graw run: %v", err)
 		} else {
-			log.Errorf("Graw run failed with error %v", wait())
+			errStr := fmt.Sprintf("%v", wait())
+
+			if strings.Contains(errStr, "bad response code: 500") {
+				log.Warningf("Restarting bot. Graw got a 500 error: %s", errStr)
+				main()
+			}
+
+			if strings.Contains(errStr, "token expired") {
+				log.Warningf("Restarting bot. Graw got a token error: %s", errStr)
+				main()
+			}
+
+			log.Errorf("Graw run failed with error %s", errStr)
 		}
 	}
 }
