@@ -110,6 +110,7 @@ func (r *spBot) Post(post *reddit.Post) error {
 			log.Debugf("Found matching post for expression '%s':\nsubreddit: %s\ntitle: %s\nSelf Text: %s\nby: %s",
 				reString, post.Subreddit, post.Title, post.SelfText, post.Author)
 			r.bot.Reply(post.Name, Text)
+			continue
 		}
 	}
 
