@@ -84,7 +84,6 @@ func (r *spBot) isPostBlackListed(post *reddit.Post) bool {
 func (r *spBot) Comment(post *reddit.Comment) error {
 
 	for reString, re := range matchRe {
-
 		if re.MatchString(post.Body) {
 			if r.isCommentBlackListed(post) {
 				return nil
@@ -92,6 +91,7 @@ func (r *spBot) Comment(post *reddit.Comment) error {
 			log.Debugf("Found matching post for expression '%s':\nsubreddit: %s\nBody: %s\nby: %s",
 				reString, post.Subreddit, post.Body, post.Author)
 			r.bot.Reply(post.Name, Text)
+			continue
 		}
 	}
 
