@@ -2,7 +2,7 @@ package main
 
 import (
 	"strings"
-	// "time"
+	"time"
 	"fmt"
 	"os"
 	"regexp"
@@ -31,10 +31,11 @@ I am a bot created by a survivor that is in no way affiliated with any of the or
 `
 
 	matchExpressions = []string{
-		`i\s*(am\sgoing\sto|will)\skill\smyself`,
-		`(will|am\sgoing\sto|want\sto)\scommit\ssuicide`,
-		`thinking.*about.*(suicide|killing\smyself)`,
-		`contemplating\s+suicide`,
+		`(?i)i\s*(am\sgoing\sto|will|will\sbe)\skill(ing)?\smyself`,
+		`(?i)(will|am\sgoing\sto|want\sto)\s(commit\ssuicide|kill\smyself)`,
+		`(?i)thinking.*about.*(suicide|killing\smyself)`,
+		`(?i)(contemplating|considering|thinking\sabout)\s+suicide`,
+		`(?i)(planning\sto\s|have\splans\sto)\s+(commit\ssuicide|kill\smyself)`,
 	}
 
 	matchRe = make(map[string]*regexp.Regexp, len(matchExpressions))
@@ -54,12 +55,25 @@ I am a bot created by a survivor that is in no way affiliated with any of the or
 	}
 )
 
-// isBlackCommentBlackListed checks if comment has anything that reports it as blacklisted
-func (r *spBot) isBlackCommentBlackListed(post *reddit.Comment) bool {
+// isCommentBlackListed checks if comment has anything that reports it as blacklisted
+func (r *spBot) isCommentBlackListed(post *reddit.Comment) bool {
 	for _, s := range blacklist {
 		if post.Subreddit == s || post.SubredditID == s {
-			log.Debugf("Ignoring matching comment in subreddit: '%s':\nbody: %s\nby: %s",
-				s, post.Body, post.Author)
+			log.Debugf("Ignoring matching comment:\nsubreddit: %s\nBody: %s\nby: %s",
+				post.Subreddit, post.Body, post.Author)
+			return true
+		}
+	}
+
+	return false
+}
+
+// isPostBlackListed checks if post has anything that reports it as blacklisted
+func (r *spBot) isPostBlackListed(post *reddit.Post) bool {
+	for _, s := range blacklist {
+		if post.Subreddit == s || post.SubredditID == s {
+			log.Debugf("Ignoring matching post:\nsubreddit: %s\ntitle: %s\nSelf Text: %s\nby: %s",
+				post.Subreddit, post.Title, post.SelfText, post.Author)
 			return true
 		}
 	}
@@ -72,12 +86,29 @@ func (r *spBot) Comment(post *reddit.Comment) error {
 	for reString, re := range matchRe {
 
 		if re.MatchString(post.Body) {
-			if r.isBlackCommentBlackListed(post) {
+			if r.isCommentBlackListed(post) {
+				return nil
+			}
+			log.Debugf("Found matching post for expression '%s':\nsubreddit: %s\nBody: %s\nby: %s",
+				reString, post.Subreddit, post.Body, post.Author)
+			r.bot.Reply(post.Name, Text)
+		}
+	}
+
+	return nil
+}
+
+func (r *spBot) Post(post *reddit.Post) error {
+
+	for reString, re := range matchRe {
+
+		if re.MatchString(post.Title) || re.MatchString(post.SelfText) {
+			if r.isPostBlackListed(post) {
 				return nil
 			}
 
-			log.Debugf("Found matching comment for expression '%s':\nbody: %s\nby: %s",
-				reString, post.Body, post.Author)
+			log.Debugf("Found matching post for expression '%s':\nsubreddit: %s\ntitle: %s\nSelf Text: %s\nby: %s",
+				reString, post.Subreddit, post.Title, post.SelfText, post.Author)
 			r.bot.Reply(post.Name, Text)
 		}
 	}
@@ -127,6 +158,7 @@ func main() {
 
 			if strings.Contains(errStr, "bad response code: 500") {
 				log.Warningf("Restarting bot. Graw got a 500 error: %s", errStr)
+				time.Sleep(time.Millisecond * 500)
 				main()
 			}
 
