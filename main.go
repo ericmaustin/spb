@@ -35,10 +35,10 @@ If you wish to help others in crises consider supporting:
 
 	// matching regex expressions
 	matchRe = []*regexp.Regexp{
-		regexp.MustCompile(`(?i)i\s*(am\sgoing\sto|will|will\sbe|should)\skill(ing)?\smyself`),
+		regexp.MustCompile(`(?i)i\s*(am\sgoing\sto|will|will\sbe|should|(should\sjust))\skill(ing)?\smyself`),
 		regexp.MustCompile(`(?i)(will|am\sgoing\sto|want\sto)\s(commit\ssuicide|kill\smyself)`),
 		regexp.MustCompile(`(?i)thinking.*about.*(suicide|killing\smyself)`),
-		regexp.MustCompile(`(?i)(contemplating|considering|thinking\sabout)\s+suicide`),
+		regexp.MustCompile(`(?i)(contemplating|considering|thinking\sabout)\s+(suicide|killing\smyself)`),
 		regexp.MustCompile(`(?i)(planning\sto\s|have\splans\sto)\s+(commit\ssuicide|kill\smyself)`),
 	}
 
