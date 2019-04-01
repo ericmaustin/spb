@@ -196,8 +196,8 @@ func (r *spBot) Comment(post *reddit.Comment) error {
 				return nil
 			}
 
-			log.Infof("Found matching comment for expression '%s':\nsubreddit: %s\nBody: %s\nby: %s",
-				reString, post.Subreddit, post.Body, post.Author)
+			log.Infof("Found matching comment for expression '%s':\nLink: %s\nsubreddit: %s\nBody: %s\nby: %s",
+				reString, post.Permalink, post.Subreddit, post.Body, post.Author)
 			err := r.bot.Reply(post.Name, Text)
 			if err != nil {
 				log.Errorf("Got error trying to post reply: %v", err)
@@ -228,8 +228,8 @@ func (r *spBot) Post(post *reddit.Post) error {
 				return nil
 			}
 
-			log.Infof("Found matching post for expression '%s':\nsubreddit: %s\ntitle: %s\nSelf Text: %s\nby: %s",
-				reString, post.Subreddit, post.Title, post.SelfText, post.Author)
+			log.Infof("Found matching post for expression '%s':\nLink: %s\nsubreddit: %s\ntitle: %s\nSelf Text: %s\nby: %s",
+				reString, post.Permalink, post.Subreddit, post.Title, post.SelfText, post.Author)
 			err := r.bot.Reply(post.Name, Text)
 			if err != nil {
 				log.Errorf("Got error trying to post reply: %v", err)
