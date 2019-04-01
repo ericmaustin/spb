@@ -82,6 +82,13 @@ If you wish to help others in crises consider supporting:
 		`zelda`,
 		`GlobalOffensive`,
 		`paydaytheheist`,
+		`gaming4gamers`,
+		`rocketleague`,
+		`games`,
+		`PS4`,
+		`xbox`,
+		`patientgamers`,
+		`WarThunder`,
 	}
 
 	itemExpires = time.Hour * 24
