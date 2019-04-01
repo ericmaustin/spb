@@ -35,7 +35,7 @@ If you wish to help others in crises consider supporting:
 
 	// matching regex expressions
 	matchRe = []*regexp.Regexp{
-		regexp.MustCompile(`(?i)i\s*(am\sgoing\sto|will|will\sbe)\skill(ing)?\smyself`),
+		regexp.MustCompile(`(?i)i\s*(am\sgoing\sto|will|will\sbe|should)\skill(ing)?\smyself`),
 		regexp.MustCompile(`(?i)(will|am\sgoing\sto|want\sto)\s(commit\ssuicide|kill\smyself)`),
 		regexp.MustCompile(`(?i)thinking.*about.*(suicide|killing\smyself)`),
 		regexp.MustCompile(`(?i)(contemplating|considering|thinking\sabout)\s+suicide`),
@@ -44,7 +44,7 @@ If you wish to help others in crises consider supporting:
 
 	// negating regex expressions
 	negateRe = []*regexp.Regexp{
-		regexp.MustCompile(`(?i)(i\sam\snot)|(i\sdon'?t\swant\sto)|never|(will\snot)`),
+		regexp.MustCompile(`(?i)(i\sam\snot)|(i\sdon'?t\swant\sto)|never|(will\snot)|can'?t|won'?t`),
 	}
 
 	blacklist = []string{
