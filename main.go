@@ -58,11 +58,10 @@ If you wish to help others in crises consider supporting:
 )
 
 type commentTheadCacheItem struct {
-	comment  *reddit.Comment
-	post	 *reddit.Post
-	expires  time.Time
+	comment *reddit.Comment
+	post    *reddit.Post
+	expires time.Time
 }
-
 
 // check if item in the cache has expired
 func (i *commentTheadCacheItem) expired() bool {
@@ -71,7 +70,7 @@ func (i *commentTheadCacheItem) expired() bool {
 
 // cache struct that contains links that have been cached
 type threadCache struct {
-	items map[string]*commentTheadCacheItem
+	items  map[string]*commentTheadCacheItem
 	stopCh chan bool
 }
 
@@ -86,7 +85,7 @@ func (tc *threadCache) addComment(comment *reddit.Comment, expiresIn time.Durati
 // adds an item into the cache with a post
 func (tc *threadCache) addPost(post *reddit.Post, expiresIn time.Duration) {
 	tc.items[post.URL] = &commentTheadCacheItem{
-		post: post,
+		post:    post,
 		expires: time.Now().Add(expiresIn),
 	}
 }
@@ -100,7 +99,7 @@ func (tc *threadCache) janitor() {
 		timer := time.NewTicker(time.Millisecond * 100)
 
 		select {
-		case stop := <- tc.stopCh:
+		case stop := <-tc.stopCh:
 			if stop == true {
 				log.Debugf("Janitor stop request recieved. Exiting.")
 				timer.Stop()
@@ -125,7 +124,7 @@ func (tc *threadCache) stopJanitor() {
 
 // the actual cache instance
 var cache = &threadCache{
-	items: make(map[string]*commentTheadCacheItem, 0),
+	items:  make(map[string]*commentTheadCacheItem, 0),
 	stopCh: make(chan bool),
 }
 
@@ -195,7 +194,10 @@ func (r *spBot) Comment(post *reddit.Comment) error {
 
 			log.Infof("Found matching comment for expression '%s':\nsubreddit: %s\nBody: %s\nby: %s",
 				reString, post.Subreddit, post.Body, post.Author)
-			r.bot.Reply(post.Name, Text)
+			err := r.bot.Reply(post.Name, Text)
+			if err != nil {
+				log.Errorf("Got error trying to post reply: %v", err)
+			}
 			continue
 		}
 	}
@@ -224,7 +226,10 @@ func (r *spBot) Post(post *reddit.Post) error {
 
 			log.Infof("Found matching post for expression '%s':\nsubreddit: %s\ntitle: %s\nSelf Text: %s\nby: %s",
 				reString, post.Subreddit, post.Title, post.SelfText, post.Author)
-			r.bot.Reply(post.Name, Text)
+			err := r.bot.Reply(post.Name, Text)
+			if err != nil {
+				log.Errorf("Got error trying to post reply: %v", err)
+			}
 			continue
 		}
 	}
@@ -271,21 +276,21 @@ func main() {
 	if bot, err := reddit.NewBotFromAgentFile("bot.agent", 0); err != nil {
 		log.Errorf("Failed to create bot handle: %v", err)
 	} else {
-		cfg := graw.Config{SubredditComments: []string{"all"}, 
-		Subreddits: []string{"all"}}
+		cfg := graw.Config{SubredditComments: []string{"all"},
+			Subreddits: []string{"all"}}
 		handler := &spBot{bot: bot}
 		if _, wait, err := graw.Run(handler, bot, cfg); err != nil {
 			log.Errorf("Failed to start graw run: %v", err)
 		} else {
 			errStr := fmt.Sprintf("%v", wait())
 
-			if strings.Contains(errStr, "bad response code: 500") {
-				log.Warningf("Restarting bot. Graw got a 500 error: %s", errStr)
+			if strings.Contains(errStr, "bad response") {
+				log.Warningf("Restarting bot. Graw got a bad response error: %s", errStr)
 				time.Sleep(time.Millisecond * 500)
 				main()
 			}
 
-			if strings.Contains(errStr, "token expired") {
+			if strings.Contains(errStr, "token expired") || strings.Contains(errStr, "connection reset") {
 				log.Warningf("Restarting bot. Graw got a token error: %s", errStr)
 				main()
 			}
