@@ -206,28 +206,26 @@ func (r *spBot) isPostBlackListed(post *reddit.Post) bool {
 // Listen to comments
 func (r *spBot) Comment(post *reddit.Comment) error {
 
-	for reString, re := range matchRe {
-		if testRegex(post.Body) {
-			if r.isCommentBlackListed(post) {
-				return nil
-			}
+	if testRegex(post.Body) {
+		if r.isCommentBlackListed(post) {
+			return nil
+		}
 
-			if !r.checkCommentExistsInCache(post) {
-				cache.addComment(post, itemExpires)
-				log.Infof("Added item to cache, LinkURL: %s", post.LinkURL)
-			} else {
-				log.Debugf("Found matching comment for expression but '%s' LinkURL %s was found in cache :\nsubreddit: %s\nBody: %s\nby: %s",
-					reString, post.LinkURL, post.Subreddit, post.Body, post.Author)
-				return nil
-			}
+		if !r.checkCommentExistsInCache(post) {
+			cache.addComment(post, itemExpires)
+			log.Infof("Added item to cache, LinkURL: %s", post.LinkURL)
+		} else {
+			log.Debugf("Found matching comment but LinkURL %s was found in cache :\nsubreddit: %s\nBody: %s\nby: %s",
+				post.LinkURL, post.Subreddit, post.Body, post.Author)
+			return nil
+		}
 
-			log.Infof("Found matching comment for expression '%s':\nLink: %s\nsubreddit: %s\nBody: %s\nby: %s",
-				reString, post.Permalink, post.Subreddit, post.Body, post.Author)
-			err := r.bot.Reply(post.Name, Text)
-			if err != nil {
-				log.Errorf("Got error trying to post reply: %v", err)
-			}
-			continue
+		log.Infof("Found matching comment:\nLink: %s\nsubreddit: %s\nBody: %s\nby: %s",
+			post.Permalink, post.Subreddit, post.Body, post.Author)
+
+		err := r.bot.Reply(post.Name, Text)
+		if err != nil {
+			log.Errorf("Got error trying to post reply: %v", err)
 		}
 	}
 
@@ -237,29 +235,25 @@ func (r *spBot) Comment(post *reddit.Comment) error {
 // listen to post
 func (r *spBot) Post(post *reddit.Post) error {
 
-	for reString, re := range matchRe {
+	if testRegex(post.Title) || testRegex(post.SelfText) {
+		if r.isPostBlackListed(post) {
+			return nil
+		}
 
-		if testRegex(post.Title) || testRegex(post.SelfText) {
-			if r.isPostBlackListed(post) {
-				return nil
-			}
+		if !r.checkPostExistsInCache(post) {
+			cache.addPost(post, itemExpires)
+			log.Infof("Added item to cache, LinkURL: %s", post.URL)
+		} else {
+			log.Debugf("Found matching post but LinkURL %s was found in cache :\nsubreddit: %s\nby: %s",
+				post.URL, post.Subreddit, post.Author)
+			return nil
+		}
 
-			if !r.checkPostExistsInCache(post) {
-				cache.addPost(post, itemExpires)
-				log.Infof("Added item to cache, LinkURL: %s", post.URL)
-			} else {
-				log.Debugf("Found matching post for expression '%s' but LinkURL %s was found in cache :\nsubreddit: %s\nby: %s",
-					reString, post.URL, post.Subreddit, post.Author)
-				return nil
-			}
-
-			log.Infof("Found matching post for expression '%s':\nLink: %s\nsubreddit: %s\ntitle: %s\nSelf Text: %s\nby: %s",
-				reString, post.Permalink, post.Subreddit, post.Title, post.SelfText, post.Author)
-			err := r.bot.Reply(post.Name, Text)
-			if err != nil {
-				log.Errorf("Got error trying to post reply: %v", err)
-			}
-			continue
+		log.Infof("Found matching post:\nLink: %s\nsubreddit: %s\ntitle: %s\nSelf Text: %s\nby: %s",
+			post.Permalink, post.Subreddit, post.Title, post.SelfText, post.Author)
+		err := r.bot.Reply(post.Name, Text)
+		if err != nil {
+			log.Errorf("Got error trying to post reply: %v", err)
 		}
 	}
 
