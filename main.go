@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"regexp"
 	"strings"
@@ -32,15 +33,19 @@ If you wish to help others in crises consider supporting:
 ^(I am a bot created by a survivor that is in no way affiliated with any of the organizations mentioned |) [^(feedback)](mailto:erics.awesome.bots@gmail.com)
 `
 
-	matchExpressions = []string{
-		`(?i)i\s*(am\sgoing\sto|will|will\sbe)\skill(ing)?\smyself`,
-		`(?i)(will|am\sgoing\sto|want\sto)\s(commit\ssuicide|kill\smyself)`,
-		`(?i)thinking.*about.*(suicide|killing\smyself)`,
-		`(?i)(contemplating|considering|thinking\sabout)\s+suicide`,
-		`(?i)(planning\sto\s|have\splans\sto)\s+(commit\ssuicide|kill\smyself)`,
+	// matching regex expressions
+	matchRe = []*regexp.Regexp{
+		regexp.MustCompile(`(?i)i\s*(am\sgoing\sto|will|will\sbe)\skill(ing)?\smyself`),
+		regexp.MustCompile(`(?i)(will|am\sgoing\sto|want\sto)\s(commit\ssuicide|kill\smyself)`),
+		regexp.MustCompile(`(?i)thinking.*about.*(suicide|killing\smyself)`),
+		regexp.MustCompile(`(?i)(contemplating|considering|thinking\sabout)\s+suicide`),
+		regexp.MustCompile(`(?i)(planning\sto\s|have\splans\sto)\s+(commit\ssuicide|kill\smyself)`),
 	}
 
-	matchRe = make(map[string]*regexp.Regexp, len(matchExpressions))
+	// negating regex expressions
+	negateRe = []*regexp.Regexp{
+		regexp.MustCompile(`(?i)(i\sam\snot)|(i\sdon'?t\swant\sto)|never|(will\snot)`),
+	}
 
 	blacklist = []string{
 		// music subrreddits with potential false positives for lyrics
@@ -56,10 +61,30 @@ If you wish to help others in crises consider supporting:
 		`quotes`,
 		// suicide watch, not needed there
 		`SuicideWatch`,
+		// gaming subreddits (lots of false positives)
+		`gaming`,
 	}
 
 	itemExpires = time.Hour * 24
 )
+
+// test regex
+func testRegex(input string) bool {
+	for _, re := range matchRe {
+		match_indexes := re.FindStringIndex(input)
+		if len(match_indexes) > 0 {
+			// make sure nothing NEGATES the match
+			prevStr := input[int(math.Max(float64(match_indexes[0]-16), 0)):match_indexes[0]]
+			for _, nre := range negateRe {
+				if nre.MatchString(prevStr) {
+					return false
+				}
+			}
+			return true
+		}
+	}
+	return false
+}
 
 type commentTheadCacheItem struct {
 	comment *reddit.Comment
@@ -182,7 +207,7 @@ func (r *spBot) isPostBlackListed(post *reddit.Post) bool {
 func (r *spBot) Comment(post *reddit.Comment) error {
 
 	for reString, re := range matchRe {
-		if re.MatchString(post.Body) {
+		if testRegex(post.Body) {
 			if r.isCommentBlackListed(post) {
 				return nil
 			}
@@ -214,7 +239,7 @@ func (r *spBot) Post(post *reddit.Post) error {
 
 	for reString, re := range matchRe {
 
-		if re.MatchString(post.Title) || re.MatchString(post.SelfText) {
+		if testRegex(post.Title) || testRegex(post.SelfText) {
 			if r.isPostBlackListed(post) {
 				return nil
 			}
@@ -267,15 +292,6 @@ func main() {
 	logging.SetBackend(backend1Formatter, backendFileFormatter)
 
 	log.Infof("Started suicide prevention bot.")
-
-	for _, exp := range matchExpressions {
-		re, err := regexp.Compile(exp)
-		if err != nil {
-			log.Errorf("Error compiling regex expression %s", re)
-			return
-		}
-		matchRe[exp] = re
-	}
 
 	if bot, err := reddit.NewBotFromAgentFile("bot.agent", 0); err != nil {
 		log.Errorf("Failed to create bot handle: %v", err)
