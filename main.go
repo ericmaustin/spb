@@ -77,6 +77,7 @@ func testRegex(input string) bool {
 			prevStr := input[int(math.Max(float64(match_indexes[0]-16), 0)):match_indexes[0]]
 			for _, nre := range negateRe {
 				if nre.MatchString(prevStr) {
+					log.Debugf("testRegex matched %s, but was negated due to this text: %s", input, prevStr)
 					return false
 				}
 			}
