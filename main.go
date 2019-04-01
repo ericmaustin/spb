@@ -63,6 +63,25 @@ If you wish to help others in crises consider supporting:
 		`SuicideWatch`,
 		// gaming subreddits (lots of false positives)
 		`gaming`,
+		`GamerNews`,
+		`leagueoflegends`,
+		`DotA2`,
+		`Minecraft`,
+		`Skyrim`,
+		`Starcraft`,
+		`Fallout`,
+		`KerbalSpaceProgram`,
+		`GrandTheftAutoV`,
+		`wow`,
+		`MagicTCG`,
+		`tf2`,
+		`AnimalCrossing`,
+		`GameDeals`,
+		`ffxiv`,
+		`civ`,
+		`zelda`,
+		`GlobalOffensive`,
+		`paydaytheheist`,
 	}
 
 	itemExpires = time.Hour * 24
