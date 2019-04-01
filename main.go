@@ -89,6 +89,10 @@ If you wish to help others in crises consider supporting:
 		`xbox`,
 		`patientgamers`,
 		`WarThunder`,
+		`LeagueOfLegends`,
+		`Overwatch`,
+		`Pokemon`,
+		`PCMasterRace`,
 	}
 
 	itemExpires = time.Hour * 24
