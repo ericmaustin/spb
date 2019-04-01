@@ -21,6 +21,8 @@ var (
 
 	Text = `**If you're in crises, please consider contacting the [National Suicide Prevention Lifeline](https://suicidepreventionlifeline.org/): 1-800-273-TALK**
 
+You may also find support by posting in r/SuicideWatch.
+
 If you wish to help others in crises consider supporting:
 - [The National Suicide Prevention Lifeline](https://suicidepreventionlifeline.org/donate/)
 - [The National Alliance on Mental Illness](https://donate.nami.org/give/197406/#!/donation/checkout)
@@ -52,6 +54,8 @@ If you wish to help others in crises consider supporting:
 		`mixes`,
 		// quote subreddits
 		`quotes`,
+		// suicide watch, not needed there
+		`SuicideWatch`,
 	}
 
 	itemExpires = time.Hour * 24
