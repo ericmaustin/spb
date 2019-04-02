@@ -330,6 +330,36 @@ func (r *spBot) Post(post *reddit.Post) error {
 	return nil
 }
 
+func runBot() {
+	if bot, err := reddit.NewBotFromAgentFile("bot.agent", 0); err != nil {
+		log.Errorf("Failed to create bot handle: %v", err)
+	} else {
+		cfg := graw.Config{SubredditComments: []string{"all"},
+			Subreddits: []string{"all"}}
+		handler := &spBot{bot: bot}
+		if _, wait, err := graw.Run(handler, bot, cfg); err != nil {
+			log.Errorf("Failed to start graw run: %v", err)
+		} else {
+			errStr := fmt.Sprintf("%v", wait())
+
+			if strings.Contains(errStr, "bad response") {
+				log.Warningf("Restarting bot. Graw got a bad response error: %s", errStr)
+				time.Sleep(time.Millisecond * 500)
+				runBot()
+			}
+
+			if strings.Contains(errStr, "token expired") || strings.Contains(errStr, "connection reset") {
+				log.Warningf("Restarting bot. Graw got a token error: %s", errStr)
+				runBot()
+			}
+
+			log.Errorf("Graw run failed with error %s", errStr)
+			time.Sleep(time.Second)
+			runBot()
+		}
+	}
+}
+
 func main() {
 
 	// stop the cache janitor when we exit
@@ -356,32 +386,5 @@ func main() {
 	logging.SetBackend(backend1Formatter, backendFileFormatter)
 
 	log.Infof("Started suicide prevention bot.")
-
-	if bot, err := reddit.NewBotFromAgentFile("bot.agent", 0); err != nil {
-		log.Errorf("Failed to create bot handle: %v", err)
-	} else {
-		cfg := graw.Config{SubredditComments: []string{"all"},
-			Subreddits: []string{"all"}}
-		handler := &spBot{bot: bot}
-		if _, wait, err := graw.Run(handler, bot, cfg); err != nil {
-			log.Errorf("Failed to start graw run: %v", err)
-		} else {
-			errStr := fmt.Sprintf("%v", wait())
-
-			if strings.Contains(errStr, "bad response") {
-				log.Warningf("Restarting bot. Graw got a bad response error: %s", errStr)
-				time.Sleep(time.Millisecond * 500)
-				main()
-			}
-
-			if strings.Contains(errStr, "token expired") || strings.Contains(errStr, "connection reset") {
-				log.Warningf("Restarting bot. Graw got a token error: %s", errStr)
-				main()
-			}
-
-			log.Errorf("Graw run failed with error %s", errStr)
-			time.Sleep(time.Second)
-			main()
-		}
-	}
+	runBot()
 }
