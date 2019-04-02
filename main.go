@@ -36,10 +36,10 @@ If you wish to help others in crises consider supporting:
 	// matching regex expressions
 	matchRe = []*regexp.Regexp{
 		regexp.MustCompile(`(?i)i\s*(am\sgoing\sto|will|will\sbe|should|(should\sjust))\skill(ing)?\smyself`),
-		regexp.MustCompile(`(?i)(will|am\sgoing\sto|want\sto)\s(commit\ssuicide|kill\smyself)`),
-		regexp.MustCompile(`(?i)thinking.*about.*(suicide|killing\smyself)`),
-		regexp.MustCompile(`(?i)(contemplating|considering|thinking\sabout)\s+(suicide|killing\smyself)`),
-		regexp.MustCompile(`(?i)(planning\sto\s|have\splans\sto)\s+(commit\ssuicide|kill\smyself)`),
+		regexp.MustCompile(`(?i)i\s.*(will|am\sgoing\sto|want\sto)\s(commit\ssuicide|kill\smyself)`),
+		regexp.MustCompile(`(?i)i\s.*thinking.*about.*(suicide|killing\smyself)`),
+		regexp.MustCompile(`(?i)i\s.*(contemplating|considering|thinking\sabout)\s+(suicide|killing\smyself)`),
+		regexp.MustCompile(`(?i)i\s.*(planning\sto\s|have\splans\sto)\s+(commit\ssuicide|kill\smyself)`),
 	}
 
 	// negating regex expressions
@@ -84,6 +84,7 @@ If you wish to help others in crises consider supporting:
 		// meta subreddits with dark humor
 		`Dank_Meme`,
 		`DankMemes`,
+		`dankmemes`,
 		// suicide watch, not needed there
 		`SuicideWatch`,
 		// gaming subreddits (lots of false positives)
@@ -379,6 +380,8 @@ func main() {
 			}
 
 			log.Errorf("Graw run failed with error %s", errStr)
+			time.Sleep(time.Second)
+			main()
 		}
 	}
 }
